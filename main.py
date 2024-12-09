@@ -44,14 +44,24 @@ REWARDS = [
     {"name": "DISNEY HESAP", "required_refs": 5, "file": "disney.txt"},
 ]
 
-# Kullanıcıyı kaydetme
+# Kullanıcıyı kaydetme ve referans sayısını artırma
 def register_user(user_id, referrer_id=None):
     cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-    if not cursor.fetchone():
+    user = cursor.fetchone()
+    
+    if not user:
+        # Yeni kullanıcı kaydediliyor
         ref_link = f"https://t.me/retrot4kk_bot?start={user_id}"
         cursor.execute("INSERT INTO users (id, refs, ref_link, referrer_id) VALUES (?, ?, ?, ?)",
                        (user_id, 0, ref_link, referrer_id))
         conn.commit()
+
+        # Eğer bir referans ID'si varsa, o kullanıcının referans sayısını artır
+        if referrer_id:
+            cursor.execute("UPDATE users SET refs = refs + 1 WHERE id = ?", (referrer_id,))
+            conn.commit()
+        logger.info(f"Yeni kullanıcı kaydedildi: {user_id}")
+
     else:
         logger.info(f"Kullanıcı zaten kaydedilmiş: {user_id}")
 
@@ -186,7 +196,8 @@ async def claim_reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 cursor.execute("UPDATE users SET refs = refs - ? WHERE id = ?", (reward["required_refs"], user_id))
                 conn.commit()
 
-                # Ödül başarıyla alındığında
+                
+# Ödül başarıyla alındığında
                 keyboard = [
                     [InlineKeyboardButton("Geri", callback_data="back_to_menu")]
                 ]
