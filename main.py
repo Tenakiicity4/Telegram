@@ -84,6 +84,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Bir seçim yapın:", reply_markup=reply_markup)
 
+# Geri butonuna tıklanınca ana menüye dön
+async def back_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    # Ana Menü
+    keyboard = [
+        [InlineKeyboardButton("📎 Referans Linki Al", callback_data="get_ref_link")],
+        [InlineKeyboardButton("🎁 Ödülleri Gör", callback_data="view_rewards")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text("Bir seçim yapın:", reply_markup=reply_markup)
+
 # Hata yakalama ve logging eklemeleri
 async def get_ref_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -179,54 +192,4 @@ async def claim_reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
 
-                await query.edit_message_text(f"✅ Tebrikler! {reward['name']} ödülünü aldınız.\n"
-                                              f"Ödül: {reward_content}\n\nMenüye dönmek için /start yazın.",
-                                              reply_markup=reply_markup)
-                return
-
-        await query.edit_message_text("❌ Geçersiz ödül.")
-    except Exception as e:
-        logger.error(f"Ödül talebi sırasında hata oluştu: {e}")
-        await query.edit_message_text("❌ Ödül talep edilirken bir hata oluştu.")
-
-# Bot sahibine özel mesaj gönderme komutu
-async def send_message_to_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != OWNER_ID:
-        await update.message.reply_text("Bu komutu yalnızca bot sahibi kullanabilir.")
-        return
-
-    # Kullanıcıdan mesajı al
-    if context.args:
-        message = " ".join(context.args)
-    else:
-        await update.message.reply_text("Lütfen göndermek istediğiniz mesajı yazın.")
-        return
-
-    # Tüm kullanıcılara mesaj gönder
-    cursor.execute("SELECT id FROM users")
-    users = cursor.fetchall()
-
-    for user in users:
-        user_id = user[0]
-        try:
-            await context.bot.send_message(user_id, message)
-        except Exception as e:
-            logger.error(f"Mesaj gönderilirken hata oluştu: {e}")
-
-    await update.message.reply_text("Mesaj tüm kullanıcılara gönderildi.")
-
-# Bot başlatma
-if __name__ == "__main__":
-    try:
-        app = ApplicationBuilder().token(TOKEN).build()
-        app.add_handler(CommandHandler("start", start))
-        app.add_handler(CommandHandler("send_message_to_all", send_message_to_all))
-        app.add_handler(CallbackQueryHandler(get_ref_link, pattern="get_ref_link"))
-        app.add_handler(CallbackQueryHandler(view_rewards, pattern="view_rewards"))
-        app.add_handler(CallbackQueryHandler(claim_reward, pattern="claim_"))
-        app.add_handler(CallbackQueryHandler(back_to_menu, pattern="back_to_menu"))
-
-        logger.info("Bot başlatılıyor...")
-        app.run_polling()
-    except Exception as e:
-        logger.error(f"Bot başlatılırken hata oluştu: {e}")
+                await query.edit_message_text(f"✅ Tebrikler! {reward['name']} ödülünü ald
