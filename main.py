@@ -4,7 +4,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 # Telegram Bot Token'ı doğrudan koda ekledik
-TOKEN = "7103385309:AAHm6VrA998net_qKA6MLfr1Eybk8PBHHeo"  # Bot token'ınızı buraya ekleyin
+TOKEN = "7907191541:AAHrm6cwSnp1i7wXspk-beje9ejKYT34qko"  # Bot token'ınızı buraya ekleyin
 
 # Bot sahibinin kullanıcı ID'sini buraya ekleyin
 OWNER_ID = 7259547401  # Bot sahibinin Telegram kullanıcı ID'si
