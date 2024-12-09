@@ -1,12 +1,13 @@
 import os
 import sqlite3
-from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# Çevresel değişkenleri yükle
-load_dotenv()
-TOKEN = os.getenv("TELEGRAM_BOT_API_TOKEN")
+# Telegram Bot Token'ı doğrudan koda ekledik
+TOKEN = "1234567890:AAHLp0Cp-iLX7AGtZlbTlyhWvkmIEadMnO9U"  # Bot token'ınızı buraya ekleyin
+
+# Bot sahibinin kullanıcı ID'sini buraya ekleyin
+OWNER_ID = 123456789  # Bot sahibinin Telegram kullanıcı ID'si
 
 # SQLite veritabanı oluşturma
 conn = sqlite3.connect("bot.db", check_same_thread=False)
@@ -135,6 +136,34 @@ async def claim_reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.edit_message_text("❌ Geçersiz ödül.")
 
+# /mesaj komutu (bot sahibine özel)
+async def send_message_to_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+
+    # Bot sahibinin ID'sini kontrol et
+    if user_id != OWNER_ID:
+        await update.message.reply_text("Bu komutu kullanma izniniz yok.")
+        return
+
+    # Kullanıcıdan mesajı al
+    message = " ".join(context.args)
+    if not message:
+        await update.message.reply_text("Lütfen bir mesaj yazın.")
+        return
+
+    # Tüm kullanıcıları veritabanından al
+    cursor.execute("SELECT id FROM users")
+    users = cursor.fetchall()
+
+    for user in users:
+        try:
+            # Herkese mesaj gönder
+            await context.bot.send_message(user[0], message)
+        except Exception as e:
+            print(f"Mesaj gönderilemedi: {e}")
+
+    await update.message.reply_text(f"Tüm kullanıcılara mesaj gönderildi: {message}")
+
 # Bot başlatma
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
@@ -144,5 +173,6 @@ if __name__ == "__main__":
     app.add_handler(CallbackQueryHandler(get_ref_link, pattern="get_ref_link"))
     app.add_handler(CallbackQueryHandler(view_rewards, pattern="view_rewards"))
     app.add_handler(CallbackQueryHandler(claim_reward, pattern="claim_"))
+    app.add_handler(CommandHandler("mesaj", send_message_to_all))
 
     app.run_polling()
