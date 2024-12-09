@@ -174,25 +174,26 @@ async def claim_reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await query.edit_message_text(f"❌ {reward['name']} stoğu tükenmiş!", reply_markup=reply_markup)
                     return
 
-                # Ödül verme ve stoktan düşme
-                with open(file_path, "r") as f:
-                    lines = f.readlines()
+                try:
+    # Ödül verme ve stoktan düşme işlemi
+    with open(file_path, "r") as f:
+        lines = f.readlines()
 
-                reward_content = lines[0].strip()
-                with open(file_path, "w") as f:
-                    f.writelines(lines[1:])
+    reward_content = lines[0].strip()
+    with open(file_path, "w") as f:
+        f.writelines(lines[1:])
 
-                # Referansları düşür
-                cursor.execute("UPDATE users SET refs = refs - ? WHERE id = ?", (reward["required_refs"], user_id))
-                conn.commit()
+    # Referansları düşür
+    cursor.execute("UPDATE users SET refs = refs - ? WHERE id = ?", (reward["required_refs"], user_id))
+    conn.commit()
 
-                # Ödül başarıyla alındığında
-                keyboard = [
-                    [InlineKeyboardButton("Geri", callback_data="back_to_menu")]
-                ]
-                reply_markup = InlineKeyboardMarkup(keyboard)
+    # Ödül başarıyla alındığında
+    keyboard = [
+        [InlineKeyboardButton("Geri", callback_data="back_to_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
-                await query.edit_message_text(f"✅ Tebrikler! {reward['name']} ödülünü aldınız.\nÖdül: {reward_content}\n\nMenüye dönmek için /start yazın.", reply_markup=reply_markup)
+    await query.edit_message_text(f"✅ Tebrikler! {reward['name']} ödülünü aldınız.\nÖdül: {reward_content}\n\nMenüye dönmek için /start yazın.", reply_markup=reply_markup)
 
 except Exception as e:
     # Hata mesajını göster
