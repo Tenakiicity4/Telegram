@@ -67,6 +67,11 @@ async def register_user(user_id, referrer_id=None, context=None):
                     f"Yeni kullanıcı: {user_id}\n"
                     f"Referans sayın: {ref_count + 1}"  # Yeni toplam referans sayısı
                 )
+
+                # Ayrıca referans sayısını güncelle
+                cursor.execute("UPDATE users SET refs = refs + 1 WHERE id = ?", (referrer_id,))
+                conn.commit()
+
             except Exception as e:
                 logger.error(f"Referans yapan kullanıcıya mesaj gönderilirken hata oluştu: {e}")
     else:
