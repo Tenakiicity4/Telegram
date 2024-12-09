@@ -5,7 +5,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 # Telegram Bot Token'ı doğrudan koda ekledik
-TOKEN = "7907191541:AAHrm6cwSnp1i7wXspk-beje9ejKYT34qko"  # Bot token'ınızı buraya ekleyin
+TOKEN = "7582412058:AAGUJ3oWGghti7Co0uVcfkv8szDhvCVdPaM"  # Bot token'ınızı buraya ekleyin
 
 # Bot sahibinin kullanıcı ID'sini buraya ekleyin
 OWNER_ID = 7259547401  # Bot sahibinin Telegram kullanıcı ID'si
@@ -48,7 +48,7 @@ REWARDS = [
 async def register_user(user_id, referrer_id=None, context=None):
     cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
     if not cursor.fetchone():
-        ref_link = f"https://t.me/retrot4kk_bot?start={user_id}"
+        ref_link = f"https://t.me/retroarsivtk_bot?start={user_id}"
         cursor.execute("INSERT INTO users (id, refs, ref_link, referrer_id) VALUES (?, ?, ?, ?)",
                        (user_id, 0, ref_link, referrer_id))
         conn.commit()
