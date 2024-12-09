@@ -97,7 +97,7 @@ async def back_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text("Bir seçim yapın:", reply_markup=reply_markup)
 
-# Hata yakalama ve logging eklemeleri
+# Referans linki al
 async def get_ref_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -174,27 +174,37 @@ async def claim_reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await query.edit_message_text(f"❌ {reward['name']} stoğu tükenmiş!", reply_markup=reply_markup)
                     return
 
-                try:
-    # Ödül verme ve stoktan düşme işlemi
-    with open(file_path, "r") as f:
-        lines = f.readlines()
+                # Ödül verme ve stoktan düşme işlemi
+                with open(file_path, "r") as f:
+                    lines = f.readlines()
 
-    reward_content = lines[0].strip()
-    with open(file_path, "w") as f:
-        f.writelines(lines[1:])
+                reward_content = lines[0].strip()
+                with open(file_path, "w") as f:
+                    f.writelines(lines[1:])
 
-    # Referansları düşür
-    cursor.execute("UPDATE users SET refs = refs - ? WHERE id = ?", (reward["required_refs"], user_id))
-    conn.commit()
+                # Referansları düşür
+                cursor.execute("UPDATE users SET refs = refs - ? WHERE id = ?", (reward["required_refs"], user_id))
+                conn.commit()
 
-    # Ödül başarıyla alındığında
-    keyboard = [
-        [InlineKeyboardButton("Geri", callback_data="back_to_menu")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+                # Ödül başarıyla alındığında
+                keyboard = [
+                    [InlineKeyboardButton("Geri", callback_data="back_to_menu")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await query.edit_message_text(f"✅ Tebrikler! {reward['name']} ödülünü aldınız.\nÖdül: {reward_content}\n\nMenüye dönmek için /start yazın.", reply_markup=reply_markup)
+                await query.edit_message_text(f"✅ Tebrikler! {reward['name']} ödülünü aldınız.\nÖdül: {reward_content}\n\nMenüye dönmek için /start yazın.", reply_markup=reply_markup)
 
-except Exception as e:
-    # Hata mesajını göster
-    await query.edit_message_text(f"❌ Hata oluştu: {str(e)}")
+    except Exception as e:
+        # Hata mesajını göster
+        await query.edit_message_text(f"❌ Hata oluştu: {str(e)}")
+
+# Uygulamayı başlat
+application = ApplicationBuilder().token(TOKEN).build()
+
+application.add_handler(CommandHandler("start", start))
+application.add_handler(CallbackQueryHandler(back_to_menu, pattern="back_to_menu"))
+application.add_handler(CallbackQueryHandler(get_ref_link, pattern="get_ref_link"))
+application.add_handler(CallbackQueryHandler(view_rewards, pattern="view_rewards"))
+application.add_handler(CallbackQueryHandler(claim_reward, pattern="claim_"))
+
+application.run_polling()
