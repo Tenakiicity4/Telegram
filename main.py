@@ -42,7 +42,7 @@ REWARDS = [
 def register_user(user_id, referrer_id=None):
     cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
     if not cursor.fetchone():
-        ref_link = f"https://t.me/retrot4kk_bot?start={user_id}"
+        ref_link = f"https://t.me/your_bot_name?start={user_id}"
         cursor.execute("INSERT INTO users (id, refs, ref_link, referrer_id) VALUES (?, ?, ?, ?)",
                        (user_id, 0, ref_link, referrer_id))
         conn.commit()
