@@ -44,24 +44,31 @@ REWARDS = [
     {"name": "DISNEY HESAP", "required_refs": 5, "file": "disney.txt"},
 ]
 
-# Kullanıcıyı kaydetme ve referans sayısını artırma
-def register_user(user_id, referrer_id=None):
+# Kullanıcıyı kaydetme ve referans yapan kişiye mesaj gönderme
+async def register_user(user_id, referrer_id=None, context=None):
     cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-    user = cursor.fetchone()
-    
-    if not user:
-        # Yeni kullanıcı kaydediliyor
+    if not cursor.fetchone():
         ref_link = f"https://t.me/retrot4kk_bot?start={user_id}"
         cursor.execute("INSERT INTO users (id, refs, ref_link, referrer_id) VALUES (?, ?, ?, ?)",
                        (user_id, 0, ref_link, referrer_id))
         conn.commit()
 
-        # Eğer bir referans ID'si varsa, o kullanıcının referans sayısını artır
+        # Eğer referans yapan bir kullanıcı varsa, ona bilgi gönder
         if referrer_id:
-            cursor.execute("UPDATE users SET refs = refs + 1 WHERE id = ?", (referrer_id,))
-            conn.commit()
-        logger.info(f"Yeni kullanıcı kaydedildi: {user_id}")
+            cursor.execute("SELECT refs FROM users WHERE id = ?", (referrer_id,))
+            ref_count = cursor.fetchone()[0]  # Referans yapan kişinin mevcut sayısını al
 
+            # Referans yapan kişiye mesaj gönderme
+            try:
+                # Referans yapan kullanıcıya mesaj gönderme
+                await context.bot.send_message(
+                    referrer_id,
+                    f"🎉 Yeni bir kullanıcı senin referans linkinle kaydoldu!\n"
+                    f"Yeni kullanıcı: {user_id}\n"
+                    f"Referans sayın: {ref_count + 1}"  # Yeni toplam referans sayısı
+                )
+            except Exception as e:
+                logger.error(f"Referans yapan kullanıcıya mesaj gönderilirken hata oluştu: {e}")
     else:
         logger.info(f"Kullanıcı zaten kaydedilmiş: {user_id}")
 
@@ -73,7 +80,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     referrer_id = None
     if len(update.message.text.split()) > 1:
         referrer_id = int(update.message.text.split()[1])  # Referans linkinden gelen ID'yi al
-    register_user(user_id, referrer_id)
+    await register_user(user_id, referrer_id, context)
 
     cursor.execute("SELECT refs FROM users WHERE id = ?", (user_id,))
     refs = cursor.fetchone()[0]
@@ -196,8 +203,7 @@ async def claim_reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 cursor.execute("UPDATE users SET refs = refs - ? WHERE id = ?", (reward["required_refs"], user_id))
                 conn.commit()
 
-                
-# Ödül başarıyla alındığında
+                # Ödül başarıyla alındığında
                 keyboard = [
                     [InlineKeyboardButton("Geri", callback_data="back_to_menu")]
                 ]
