@@ -42,7 +42,7 @@ REWARDS = [
 def register_user(user_id, referrer_id=None):
     cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
     if not cursor.fetchone():
-        ref_link = f"https://t.me/your_bot_name?start={user_id}"
+        ref_link = f"https://t.me/retrot4kk_bot?start={user_id}"
         cursor.execute("INSERT INTO users (id, refs, ref_link, referrer_id) VALUES (?, ?, ?, ?)",
                        (user_id, 0, ref_link, referrer_id))
         conn.commit()
@@ -136,14 +136,26 @@ async def claim_reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for reward in REWARDS:
         if reward["name"] == data:
             if refs < reward["required_refs"]:
+                # Bakiye yetersiz olduğunda geri butonuyla birlikte mesaj
+                keyboard = [
+                    [InlineKeyboardButton("Geri", callback_data="back_to_menu")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
                 await query.edit_message_text(f"❌ {reward['name']} için yetersiz referans! "
-                                              f"{reward['required_refs']} davet gerekiyor.")
+                                              f"{reward['required_refs']} davet gerekiyor.", reply_markup=reply_markup)
                 return
 
             # Stok kontrolü
             file_path = reward["file"]
             if not os.path.exists(file_path) or os.stat(file_path).st_size == 0:
-                await query.edit_message_text(f"❌ {reward['name']} stoğu tükenmiş!")
+                # Stok tükenmişse, geri butonu ekle
+                keyboard = [
+                    [InlineKeyboardButton("Geri", callback_data="back_to_menu")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                await query.edit_message_text(f"❌ {reward['name']} stoğu tükenmiş!", reply_markup=reply_markup)
                 return
 
             # Ödül verme ve stoktan düşme
@@ -158,27 +170,46 @@ async def claim_reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
             cursor.execute("UPDATE users SET refs = refs - ? WHERE id = ?", (reward["required_refs"], user_id))
             conn.commit()
 
-            # Geri butonu ekleyerek ödül mesajını gönder
+            # Ödül başarıyla alındığında
             keyboard = [
                 [InlineKeyboardButton("Geri", callback_data="back_to_menu")]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await query.edit_message_text(f"✅ Tebrikler! {reward['name']} ödülünü aldınız.\n"
-                                          f"Ödül: {reward_content}", reply_markup=reply_markup)
+                                          f"Ödül: {reward_content}\n\nMenüye dönmek için /start yazın.",
+                                          reply_markup=reply_markup)
             return
 
     await query.edit_message_text("❌ Geçersiz ödül.")
 
+# Bot sahibine özel mesaj gönderme komutu
+async def send_message_to_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Eğer kullanıcı bot sahibiyse
+    if update.effective_user.id != OWNER_ID:
+        await update.message.reply_text("Bu komutu yalnızca bot sahibi kullanabilir.")
+        return
+
+    # Kullanıcıdan mesajı al
+    if context.args:
+        message = " ".join(context.args)
+    else:
+        await update.message.reply_text("Lütfen göndermek istediğiniz mesajı yazın.")
+        return
+
+    # Tüm kullanıcılara mesaj gönder
+    cursor.execute("SELECT id FROM users")
+    users = cursor.fetchall()
+
+    for user in users:
+        user_id = user[0]
+        try:
+            await context.bot.send_message(user_id, message)
+        except Exception as e:
+            print(f"Mesaj gönderilirken hata oluştu: {e}")
+
+    await update.message.reply_text("Mesaj tüm kullanıcılara gönderildi.")
+
 # Bot başlatma
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
-
-    # Komut ve callback handler'ları
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(get_ref_link, pattern="get_ref_link"))
-    app.add_handler(CallbackQueryHandler(view_rewards, pattern="view_rewards"))
-    app.add_handler(CallbackQueryHandler(claim_reward, pattern="claim_"))
-    app.add_handler(CallbackQueryHandler(back_to_menu, pattern="back_to_menu"))
-
-    app.run_polling()
