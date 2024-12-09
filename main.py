@@ -192,4 +192,4 @@ async def claim_reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
 
-                await query.edit_message_text(f"✅ Tebrikler! {reward['name']} ödülünü ald
+                await query.edit_message_text(f"✅ Tebrikler! {reward['name']} ödülünü aldınız.\nÖdül: {reward_content}\n\nMenüye dönmek için /start yazın.", reply_markup=reply_markup)
