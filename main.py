@@ -112,10 +112,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Merhaba {update.effective_user.first_name}!\n"
         f"Referans linkini paylaşarak ödüller kazanabilirsin.\n\n"
         f"Mevcut referans sayın: {refs}\n\n"
-        "Mevcut komutlar:\n"
-        "/ekle [user_id] [sayı] - Referans ekle (Sadece kuruculara özel)\n"
-        "/mesaj [mesaj] - Tüm kullanıcılara mesaj gönder (Sadece kuruculara özel)\n"
-        "/ödüller - Ödülleri görmek için"
     )
 
     # Kanal katılma butonu ekle
