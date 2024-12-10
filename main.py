@@ -1,14 +1,16 @@
-import os
 import sqlite3
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatMember
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
 
-# Telegram Bot Token'ı doğrudan koda ekledik
-TOKEN = "7582412058:AAGUJ3oWGghti7Co0uVcfkv8szDhvCVdPaM"  # Bot token'ınızı buraya ekleyin
+# Telegram Bot Token'ı
+TOKEN = "7582412058:AAGUJ3oWGghti7Co0uVcfkv8szDhvCVdPaM"
 
-# Bot sahibinin kullanıcı ID'sini buraya ekleyin
+# Bot sahibinin kullanıcı ID'si
 OWNER_ID = 7259547401  # Bot sahibinin Telegram kullanıcı ID'si
+
+# Zorunlu kanalların bilgileri (2 kanal)
+REQUIRED_CHANNELS = ["https://t.me/+-0yqQ4B8sYA1ZDQ0", "@t4kiicity"]  # Burada kanal kullanıcı adlarını girin
 
 # SQLite veritabanı oluşturma
 conn = sqlite3.connect("bot.db", check_same_thread=False)
@@ -25,11 +27,6 @@ CREATE TABLE IF NOT EXISTS users (
 """)
 conn.commit()
 
-# Logging ayarları
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-                    level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
 # Ödül bilgileri
 REWARDS = [
     {"name": "SUPERCELL", "required_refs": 10, "file": "supercell.txt"},
@@ -42,7 +39,12 @@ REWARDS = [
     {"name": "PLAY KOD", "required_refs": 10, "file": "play_kod.txt"},
     {"name": "EXXEN HESAP", "required_refs": 5, "file": "exxen.txt"},
     {"name": "DISNEY HESAP", "required_refs": 5, "file": "disney.txt"},
+    {"name": "LIVE", "required_refs": 20, "file": "live.txt"},  # Yeni ödül eklendi
 ]
+
+# Logging ayarları
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Kullanıcıyı kaydetme ve referans yapan kişiye mesaj gönderme
 async def register_user(user_id, referrer_id=None, context=None):
@@ -60,7 +62,6 @@ async def register_user(user_id, referrer_id=None, context=None):
 
             # Referans yapan kişiye mesaj gönderme
             try:
-                # Referans yapan kullanıcıya mesaj gönderme
                 await context.bot.send_message(
                     referrer_id,
                     f"🎉 Yeni bir kullanıcı senin referans linkinle kaydoldu!\n"
@@ -77,9 +78,24 @@ async def register_user(user_id, referrer_id=None, context=None):
     else:
         logger.info(f"Kullanıcı zaten kaydedilmiş: {user_id}")
 
+# Kanal kontrolü
+async def check_channel_membership(update: Update):
+    user_id = update.effective_user.id
+    for channel in REQUIRED_CHANNELS:
+        chat_member = await update.bot.get_chat_member(channel, user_id)
+        if chat_member.status not in [ChatMember.ADMINISTRATOR, ChatMember.MEMBER]:
+            await update.message.reply_text(
+                f"❌ Botu kullanabilmek için **{channel}** kanalına katılmanız gerekiyor."
+            )
+            return False
+    return True
+
 # /start komutu
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+
+    if not await check_channel_membership(update):
+        return
 
     # Kullanıcıyı kaydet, referans linki gönder
     referrer_id = None
@@ -95,49 +111,62 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Merhaba {update.effective_user.first_name}!\n"
         f"Referans linkini paylaşarak ödüller kazanabilirsin.\n\n"
         f"Mevcut referans sayın: {refs}\n\n"
-        "Ödülleri görmek için '🎁 Ödülleri Gör' butonuna tıklayın."
+        "Mevcut komutlar:\n"
+        "/ekle [user_id] [sayı] - Referans ekle (Sadece kuruculara özel)\n"
+        "/mesaj [mesaj] - Tüm kullanıcılara mesaj gönder (Sadece kuruculara özel)\n"
+        "/ödüller - Ödülleri görmek için"
     )
 
-    # Seçim menüsü (Ana Menü)
-    keyboard = [
-        [InlineKeyboardButton("📎 Referans Linki Al", callback_data="get_ref_link")],
-        [InlineKeyboardButton("🎁 Ödülleri Gör", callback_data="view_rewards")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Bir seçim yapın:", reply_markup=reply_markup)
+# /ekle komutu (Sadece kuruculara özel)
+async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("❌ Bu komut sadece kuruculara özeldir.")
+        return
 
-# Geri butonuna tıklanınca ana menüye dön
-async def back_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+    if len(context.args) < 2:
+        await update.message.reply_text("❌ Kullanıcı ID'si ve referans sayısı girmeniz gerekiyor.")
+        return
 
-    # Ana Menü
-    keyboard = [
-        [InlineKeyboardButton("📎 Referans Linki Al", callback_data="get_ref_link")],
-        [InlineKeyboardButton("🎁 Ödülleri Gör", callback_data="view_rewards")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text("Bir seçim yapın:", reply_markup=reply_markup)
+    target_user_id = int(context.args[0])
+    ref_count = int(context.args[1])
 
-# Referans linki al
-async def get_ref_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+    cursor.execute("SELECT refs FROM users WHERE id = ?", (target_user_id,))
+    current_refs = cursor.fetchone()
 
-    user_id = query.from_user.id
-    try:
-        cursor.execute("SELECT ref_link FROM users WHERE id = ?", (user_id,))
-        ref_link = cursor.fetchone()[0]
+    if not current_refs:
+        await update.message.reply_text("❌ Bu kullanıcı kayıtlı değil.")
+        return
 
-        # Geri butonu ekleyerek referans linkini göster
-        keyboard = [
-            [InlineKeyboardButton("Geri", callback_data="back_to_menu")],
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(f"Bu senin referans linkin:\n\n{ref_link}", reply_markup=reply_markup)
-    except Exception as e:
-        logger.error(f"Referans linki alınırken hata oluştu: {e}")
-        await query.edit_message_text("❌ Bir hata oluştu, lütfen tekrar deneyin.")
+    cursor.execute("UPDATE users SET refs = refs + ? WHERE id = ?", (ref_count, target_user_id))
+    conn.commit()
+
+    await update.message.reply_text(f"✅ Kullanıcı {target_user_id} başarıyla {ref_count} referans eklendi.")
+
+# /mesaj komutu (Sadece kuruculara özel)
+async def send_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("❌ Bu komut sadece kuruculara özeldir.")
+        return
+
+    if len(context.args) < 1:
+        await update.message.reply_text("❌ Mesaj yazmanız gerekiyor.")
+        return
+
+    message = " ".join(context.args)
+    
+    # Tüm kullanıcılara mesaj gönder
+    cursor.execute("SELECT id FROM users")
+    users = cursor.fetchall()
+
+    for user in users:
+        try:
+            await update.bot.send_message(user[0], message)
+        except Exception as e:
+            logger.error(f"Mesaj gönderilirken hata oluştu: {e}")
+
+    await update.message.reply_text("✅ Mesaj tüm kullanıcılara gönderildi.")
 
 # Ödülleri görüntüleme
 async def view_rewards(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -159,74 +188,13 @@ async def view_rewards(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Ödüller görüntülenirken hata oluştu: {e}")
         await query.edit_message_text("❌ Ödüller yüklenirken bir hata oluştu.")
 
-# Ödül talebi işleme
-async def claim_reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    user_id = query.from_user.id
-    data = query.data.split("_", 1)[1]
-
-    try:
-        cursor.execute("SELECT refs FROM users WHERE id = ?", (user_id,))
-        refs = cursor.fetchone()[0]
-
-        for reward in REWARDS:
-            if reward["name"] == data:
-                if refs < reward["required_refs"]:
-                    # Bakiye yetersiz olduğunda geri butonuyla birlikte mesaj
-                    keyboard = [
-                        [InlineKeyboardButton("Geri", callback_data="back_to_menu")]
-                    ]
-                    reply_markup = InlineKeyboardMarkup(keyboard)
-
-                    await query.edit_message_text(f"❌ {reward['name']} için yetersiz referans! "
-                                                  f"{reward['required_refs']} davet gerekiyor.", reply_markup=reply_markup)
-                    return
-
-                # Stok kontrolü
-                file_path = reward["file"]
-                if not os.path.exists(file_path) or os.stat(file_path).st_size == 0:
-                    # Stok tükenmişse, geri butonu ekle
-                    keyboard = [
-                        [InlineKeyboardButton("Geri", callback_data="back_to_menu")]
-                    ]
-                    reply_markup = InlineKeyboardMarkup(keyboard)
-
-                    await query.edit_message_text(f"❌ {reward['name']} stoğu tükenmiş!", reply_markup=reply_markup)
-                    return
-
-                # Ödül verme ve stoktan düşme işlemi
-                with open(file_path, "r") as f:
-                    lines = f.readlines()
-
-                reward_content = lines[0].strip()
-                with open(file_path, "w") as f:
-                    f.writelines(lines[1:])
-
-                # Referansları düşür
-                cursor.execute("UPDATE users SET refs = refs - ? WHERE id = ?", (reward["required_refs"], user_id))
-                conn.commit()
-
-                # Ödül başarıyla alındığında
-                keyboard = [
-                    [InlineKeyboardButton("Geri", callback_data="back_to_menu")]
-                ]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-
-                await query.edit_message_text(f"✅ Tebrikler! {reward['name']} ödülünü aldınız.\nÖdül: {reward_content}\n\nMenüye dönmek için /start yazın.", reply_markup=reply_markup)
-
-    except Exception as e:
-        # Hata mesajını göster
-        await query.edit_message_text(f"❌ Hata oluştu: {str(e)}")
-
 # Uygulamayı başlat
 application = ApplicationBuilder().token(TOKEN).build()
 
 application.add_handler(CommandHandler("start", start))
-application.add_handler(CallbackQueryHandler(back_to_menu, pattern="back_to_menu"))
-application.add_handler(CallbackQueryHandler(get_ref_link, pattern="get_ref_link"))
-application.add_handler(CallbackQueryHandler(view_rewards, pattern="view_rewards"))
-application.add_handler(CallbackQueryHandler(claim_reward, pattern="claim_"))
+application.add_handler(CommandHandler("ekle", add_user))
+application.add_handler(CommandHandler("mesaj", send_message))
+application.add_handler(CallbackQueryHandler(view_rewards, pattern="^claim_"))
+application.add_handler(CallbackQueryHandler(view_rewards, pattern="^back_to_menu"))
 
 application.run_polling()
