@@ -80,10 +80,10 @@ async def register_user(user_id, referrer_id=None, context=None):
         logger.info(f"Kullanıcı zaten kaydedilmiş: {user_id}")
 
 # Kanal kontrolü
-async def check_channel_membership(update: Update):
+async def check_channel_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     for channel in REQUIRED_CHANNELS:
-        chat_member = await update.bot.get_chat_member(channel, user_id)
+        chat_member = await context.bot.get_chat_member(channel, user_id)  # update.bot yerine context.bot
         if chat_member.status not in [ChatMember.ADMINISTRATOR, ChatMember.MEMBER]:
             await update.message.reply_text(
                 f"❌ Botu kullanabilmek için **{channel}** kanalına katılmanız gerekiyor."
@@ -95,7 +95,7 @@ async def check_channel_membership(update: Update):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
-    if not await check_channel_membership(update):
+    if not await check_channel_membership(update, context):
         return
 
     # Kullanıcıyı kaydet, referans linki gönder
@@ -163,7 +163,7 @@ async def send_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for user in users:
         try:
-            await update.bot.send_message(user[0], message)
+            await context.bot.send_message(user[0], message)  # update.bot yerine context.bot
         except Exception as e:
             logger.error(f"Mesaj gönderilirken hata oluştu: {e}")
 
