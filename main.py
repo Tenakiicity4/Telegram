@@ -11,7 +11,7 @@ TOKEN = "7800983302:AAGT6wlJyyIrtI-S4qVJH_CInldZEd5NSBM"
 OWNER_ID = 7259547401  # Bot sahibinin Telegram kullanıcı ID'si
 
 # Zorunlu kanalların bilgileri (2 kanal)
-REQUIRED_CHANNELS = ["https://t.me/+-0yqQ4B8sYA1ZDQ0", "@t4kiicity"]  # Burada kanal kullanıcı adlarını girin
+REQUIRED_CHANNELS = ["@t4kiicity"]  # Burada kanal kullanıcı adlarını girin
 
 # SQLite veritabanı oluşturma
 conn = sqlite3.connect("bot.db", check_same_thread=False)
