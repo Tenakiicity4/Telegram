@@ -118,6 +118,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/ödüller - Ödülleri görmek için"
     )
 
+    # Kanal katılma butonu ekle
+    keyboard = [
+        [InlineKeyboardButton("Kanalımıza Katıl", url='https://t.me/t4kiicity')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("Lütfen kanalımıza katılın:", reply_markup=reply_markup)
+
 # /ekle komutu (Sadece kuruculara özel)
 async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -187,7 +194,7 @@ async def view_rewards(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("🎁 Mevcut Ödüller:\nÖdül almak için birine tıklayın.", reply_markup=reply_markup)
     except Exception as e:
         logger.error(f"Ödüller görüntülenirken hata oluştu: {e}")
-        await query.edit_message_text("❌ Ödüller yüklenirken bir hata oluştu.")
+await query.edit_message_text("❌ Ödüller yüklenirken bir hata oluştu.")
 
 # Ödül talep etme ve dosya silme
 async def claim_reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -235,3 +242,4 @@ application.add_handler(CallbackQueryHandler(view_rewards, pattern="^back_to_men
 application.add_handler(CallbackQueryHandler(claim_reward, pattern="^claim_"))
 
 application.run_polling()
+        
