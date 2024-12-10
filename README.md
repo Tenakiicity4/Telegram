@@ -1,1 +1,1 @@
-# Telegram
+# Telegram BU KOD T4NAKİİ YE AİTTİR
