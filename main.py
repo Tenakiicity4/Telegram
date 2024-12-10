@@ -1,5 +1,6 @@
 import sqlite3
 import logging
+import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatMember
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
 
@@ -39,7 +40,7 @@ REWARDS = [
     {"name": "PLAY KOD", "required_refs": 10, "file": "play_kod.txt"},
     {"name": "EXXEN HESAP", "required_refs": 5, "file": "exxen.txt"},
     {"name": "DISNEY HESAP", "required_refs": 5, "file": "disney.txt"},
-    {"name": "LIVE", "required_refs": 20, "file": "live.txt"},  # Yeni ödül eklendi
+    {"name": "LIVE", "required_refs": 20, "file": "live.txt"},
 ]
 
 # Logging ayarları
@@ -188,6 +189,41 @@ async def view_rewards(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Ödüller görüntülenirken hata oluştu: {e}")
         await query.edit_message_text("❌ Ödüller yüklenirken bir hata oluştu.")
 
+# Ödül talep etme ve dosya silme
+async def claim_reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    reward_name = query.data.split("_")[1]  # "claim_<reward_name>" kısmından ödül ismini al
+    user_id = update.effective_user.id
+    
+    # Kullanıcının mevcut referans sayısını al
+    cursor.execute("SELECT refs FROM users WHERE id = ?", (user_id,))
+    user_data = cursor.fetchone()
+    if not user_data:
+        await query.answer("❌ Kullanıcı bulunamadı.")
+        return
+
+    user_refs = user_data[0]
+
+    # Ödül koşulunu kontrol et
+    reward = next((r for r in REWARDS if r["name"] == reward_name), None)
+    if not reward:
+        await query.answer("❌ Geçersiz ödül.")
+        return
+
+    if user_refs >= reward["required_refs"]:
+        # Ödül verildi
+        # Ödülü aldıktan sonra, dosyayı sil
+        reward_file = reward["file"]
+        
+        # Ödül dosyasını sil
+        if os.path.exists(reward_file):
+            os.remove(reward_file)
+            await query.answer(f"✅ {reward_name} ödülünü başarıyla aldınız ve dosya silindi.")
+        else:
+            await query.answer(f"❌ {reward_name} dosyası bulunamadı.")
+    else:
+        await query.answer(f"❌ {reward_name} ödülünü almak için {reward['required_refs']} referans gerekmektedir. Mevcut referans sayınız: {user_refs}")
+
 # Uygulamayı başlat
 application = ApplicationBuilder().token(TOKEN).build()
 
@@ -196,5 +232,6 @@ application.add_handler(CommandHandler("ekle", add_user))
 application.add_handler(CommandHandler("mesaj", send_message))
 application.add_handler(CallbackQueryHandler(view_rewards, pattern="^claim_"))
 application.add_handler(CallbackQueryHandler(view_rewards, pattern="^back_to_menu"))
+application.add_handler(CallbackQueryHandler(claim_reward, pattern="^claim_"))
 
 application.run_polling()
