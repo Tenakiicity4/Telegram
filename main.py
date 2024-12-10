@@ -5,7 +5,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatMem
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
 
 # Telegram Bot Token'ı
-TOKEN = "7333645123:AAGSDrQOTz4QX1-bN9qn6qBBYTsPpon01VI"
+TOKEN = "7582412058:AAGUJ3oWGghti7Co0uVcfkv8szDhvCVdPaM"
 
 # Bot sahibinin kullanıcı ID'si
 OWNER_ID = 7259547401  # Bot sahibinin Telegram kullanıcı ID'si
@@ -96,6 +96,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
     if not await check_channel_membership(update, context):
+        keyboard = [
+            [InlineKeyboardButton("Kanalımıza Katıl", url='https://t.me/t4kiicity')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("Lütfen kanalımıza katılın:", reply_markup=reply_markup)
         return
 
     # Kullanıcıyı kaydet, referans linki gönder
@@ -112,14 +117,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Merhaba {update.effective_user.first_name}!\n"
         f"Referans linkini paylaşarak ödüller kazanabilirsin.\n\n"
         f"Mevcut referans sayın: {refs}\n\n"
+        "Mevcut komutlar:\n"
+        "/ekle [user_id] [sayı] - Referans ekle (Sadece kuruculara özel)\n"
+        "/mesaj [mesaj] - Tüm kullanıcılara mesaj gönder (Sadece kuruculara özel)\n"
+        "/ödüller - Ödülleri görmek için"
     )
-
-    # Kanal katılma butonu ekle
-    keyboard = [
-        [InlineKeyboardButton("Kanalımıza Katıl", url='https://t.me/t4kiicity')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Lütfen kanalımıza katılın:", reply_markup=reply_markup)
 
 # /ekle komutu (Sadece kuruculara özel)
 async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
