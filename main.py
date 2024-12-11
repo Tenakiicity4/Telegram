@@ -5,12 +5,12 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatMem
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
 
 # Telegram Bot Token'ı
-TOKEN = "7323683867:AAEHC3h1-i2vq32uGy1jfHSieBLrLLAofgI"
+TOKEN = "7582412058:AAGUJ3oWGghti7Co0uVcfkv8szDhvCVdPaM"
 
 # Bot sahibinin kullanıcı ID'si
 OWNER_ID = 7259547401  # Bot sahibinin Telegram kullanıcı ID'si
 
-# Zorunlu kanalların bilgileri (2 kanal)
+# Zorunlu kanalların bilgileri (1 kanal)
 REQUIRED_CHANNELS = ["@t4kiicity"]  # Burada kanal kullanıcı adlarını girin
 
 # SQLite veritabanı oluşturma
@@ -86,7 +86,8 @@ async def check_channel_membership(update: Update, context: ContextTypes.DEFAULT
         chat_member = await context.bot.get_chat_member(channel, user_id)  # update.bot yerine context.bot
         if chat_member.status not in [ChatMember.ADMINISTRATOR, ChatMember.MEMBER]:
             await update.message.reply_text(
-                f"❌ Botu kullanabilmek için **{channel}** kanalına katılmanız gerekiyor."
+                "Bu botu kullanabilmek için kanalımıza katılmalısın ❌", 
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Kanalımıza Katıl", url='https://t.me/t4kiicity')]])
             )
             return False
     return True
@@ -96,11 +97,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
     if not await check_channel_membership(update, context):
-        keyboard = [
-            [InlineKeyboardButton("Kanalımıza Katıl", url='https://t.me/t4kiicity')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text("Lütfen kanalımıza katılın:", reply_markup=reply_markup)
         return
 
     # Kullanıcıyı kaydet, referans linki gönder
